@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CodexBar</title>
+    <meta
+      name="description"
+      content="Tiny macOS menu bar app that keeps your Codex, Claude Code, Cursor, Gemini, Antigravity, and z.ai limits visible."
+    />
+    <meta name="theme-color" content="#0b1016" />
+    <link rel="canonical" href="https://codexbar.app/" />
+
+    <meta property="og:title" content="CodexBar" />
+    <meta
+      property="og:description"
+      content="Tiny macOS menu bar app that keeps your Codex, Claude Code, Cursor, Gemini, Antigravity, and z.ai limits visible."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://codexbar.app/" />
+    <meta property="og:image" content="https://codexbar.app/codexbar.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="./icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <link rel="stylesheet" href="./site.css?v=a1b2c3d" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top" data-animate="1">
+        <a class="brand" href="https://github.com/steipete/CodexBar" aria-label="CodexBar on GitHub">
+          <img class="mark" src="./icon.png" alt="" aria-hidden="true" width="44" height="44" />
+          <span class="name">
+            <h1 class="title">CodexBar</h1>
+            <p class="tagline">Codex, Claude Code, Cursor, Gemini, Antigravity, z.ai limits.</p>
+          </span>
+        </a>
+        <nav class="links" aria-label="Links">
+          <a class="btn primary" href="https://github.com/steipete/CodexBar/releases/latest">Download</a>
+          <a class="btn ghost" href="https://github.com/steipete/CodexBar">Source</a>
+        </nav>
+      </header>
+
+      <section class="hero" aria-label="Overview">
+        <div class="copy" data-animate="2">
+          <div class="badges" aria-label="Highlights">
+            <span class="badge">macOS 15+</span>
+            <span class="badge">Free &amp; open source</span>
+            <span class="badge">No passwords stored</span>
+          </div>
+          <h2>Stay ahead of resets.</h2>
+          <p>
+            CodexBar keeps your session + weekly windows (and credits where available) in the menu bar, so you never have
+            to guess when you’re safe to ship.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="https://github.com/steipete/CodexBar/releases/latest">Download latest</a>
+            <a class="btn" href="https://github.com/steipete/CodexBar">View on GitHub</a>
+          </div>
+          <p class="brew-line">
+            Homebrew: <code id="brew-cmd">brew install --cask steipete/tap/codexbar</code>
+            <button class="copy-btn" onclick="copyBrew()" aria-label="Copy to clipboard" title="Copy to clipboard">
+              <svg class="icon-copy" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+                <path d="M5 11H3.5A1.5 1.5 0 012 9.5v-7A1.5 1.5 0 013.5 1h7A1.5 1.5 0 0112 2.5V5"/>
+              </svg>
+              <svg class="icon-check" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 8 6 11 13 4"/>
+              </svg>
+            </button>
+          </p>
+          <script>
+            function copyBrew() {
+              const cmd = document.getElementById('brew-cmd').textContent;
+              navigator.clipboard.writeText(cmd).then(() => {
+                document.querySelector('.copy-btn').classList.add('copied');
+                setTimeout(() => document.querySelector('.copy-btn').classList.remove('copied'), 1500);
+              });
+            }
+          </script>
+          <ul class="bullets" aria-label="What it does">
+            <li>One status item per provider (Codex, Claude, Cursor, Gemini, Antigravity, z.ai).</li>
+            <li>Session + weekly bars, plus reset times.</li>
+            <li>Web-backed limits via browser cookies (Codex, Claude, Cursor).</li>
+            <li>Minimal UI, no Dock icon.</li>
+          </ul>
+        </div>
+        <figure class="shot" data-animate="3">
+          <img src="./codexbar.png" alt="CodexBar menu bar popover showing session and weekly usage." />
+        </figure>
+      </section>
+
+      <section class="details" aria-label="Details" data-animate="4">
+        <div class="card">
+          <h3>Providers</h3>
+          <p>
+            Codex · Claude Code · Cursor · Gemini · Antigravity · z.ai
+          </p>
+        </div>
+        <div class="card">
+          <h3>Data sources</h3>
+          <p>
+            CLI + local RPC where available, web dashboards via browser cookies for Codex/Claude/Cursor, plus z.ai API key
+            support (<a href="https://z.ai/manage-apikey/subscription">z.ai dashboard</a>).
+          </p>
+        </div>
+        <div class="card">
+          <h3>Privacy</h3>
+          <p>
+            Reuses existing browser cookies (Safari/Chrome/Firefox) for dashboard access — no passwords stored. When cookies
+            are missing, CodexBar falls back to local CLI output.
+          </p>
+        </div>
+      </section>
+
+      <footer class="foot" data-animate="5">
+        <p>
+          Built by <a href="https://github.com/steipete">Peter Steinberger</a> •
+          <a href="https://github.com/steipete/CodexBar/blob/main/CHANGELOG.md">Changelog</a> •
+          <a href="https://github.com/steipete/CodexBar/blob/main/LICENSE">MIT</a>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
