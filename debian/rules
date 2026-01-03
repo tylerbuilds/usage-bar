@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	swdt build -c release --product CodexBarCLI
+
+override_dh_auto_install:
+	# Install CLI
+	install -D -m 755 .build/release/CodexBarCLI debian/usagebar/usr/bin/usagebar
+	# Install tray app
+	install -D -m 755 usagebar-tray.py debian/usagebar/usr/lib/usagebar/usagebar-tray.py
+	install -D -m 755 usagebar-tray-launcher.sh debian/usagebar/usr/bin/usagebar-tray
+	# Install assets
+	install -D -m 644 assets/style.css debian/usagebar/usr/lib/usagebar/assets/style.css
+	install -D -m 644 assets/icons/*.svg debian/usagebar/usr/lib/usagebar/assets/icons/
+	# Install history and charts modules
+	install -D -m 644 usagebar-history.py debian/usagebar/usr/lib/usagebar/usagebar-history.py
+	install -D -m 644 usagebar-charts.py debian/usagebar/usr/lib/usagebar/usagebar-charts.py
+	# Install desktop file
+	install -D -m 644 usagebar.desktop debian/usagebar/usr/share/applications/usagebar.desktop

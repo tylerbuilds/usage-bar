@@ -1,0 +1,9 @@
+usagebar (1.0.0) unstable; urgency=medium
+
+  * Initial release
+  * Multi-provider AI usage tracking
+  * SQLite history with sparkline visualizations
+  * GTK3 system tray interface
+  * Dark/light theme support
+
+ -- Tyler Casey <tc@tylerbuilds.com>  Fri, 03 Jan 2026 00:00:00 -0000
