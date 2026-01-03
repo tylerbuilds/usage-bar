@@ -1,14 +1,22 @@
-# Xcode user/session
+# Xcode
 xcuserdata/
+*.xcuserstate
+*.xcuserdatad
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
 
 # Build products
 .build/
 DerivedData
+build/
+*.o
+*.lo
 
 # Bundles / artifacts
 CodexBar.app
 Codexbar.app
-*.ipa
 *.dSYM*
 *.zip
 *.delta
@@ -22,12 +30,39 @@ Icon.iconset
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
 
 # Local Config & Logs
 .config/
 /tmp/usagebar*
 *.log
+.env
+*.env
 
-# Swift Package Manager metadata (leave sources tracked)
-# Packages/
-# Package.resolved
+# Distribution
+*.deb
+*.AppImage
+*.tar.xz
+usagebar-*.tar.gz
+appimage-builder-x86_64.AppImage
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

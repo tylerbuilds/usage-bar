@@ -1,0 +1,10 @@
+# Codeowners file for UsageBar
+# This file defines which individuals or teams are responsible for code in this repository.
+
+# Global owners
+* @tylerbuilds
+
+# Specific files or patterns
+*.md @tylerbuilds
+*.swift @tylerbuilds
+*.py @tylerbuilds

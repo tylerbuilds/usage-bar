@@ -1,82 +1,138 @@
-# UsageBar 🚀
+# UsageBar - Linux AI Usage Tracker
 
-**The premium AI usage tracker for Linux.**
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Platform: Linux](https://img.shields.io/badge/Platform-Linux-orange.svg)
+![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-green.svg)
 
-UsageBar is a Linux-native system tray application that provides real-time visibility into your AI provider limits. Inspired by the excellent [CodexBar.app](https://codexbar.app) for macOS, UsageBar brings a rich, expandable UI to Ubuntu and other Linux distributions, ensuring you never hit a "limit reached" surprise again.
+A professional system tray application for tracking AI API usage across multiple providers. The Linux port of CodexBar, built with GTK3 and Python.
+
+**[www.tylerbuilds.com](https://www.tylerbuilds.com) | [github.com/tylerbuilds](https://github.com/tylerbuilds)**
 
 ![UsageBar Tray Preview](codexbar.png)
+
+## ✨ Features
+
+- **Multi-Provider Support**: Claude, Codex, Gemini, Cursor, Z.ai, Antigravity, Factory
+- **Real-Time Monitoring**: Live usage tracking with visual progress bars
+- **Historical Analytics**: SQLite-based history with 90-day retention
+- **Sparkline Charts**: Beautiful 24h trend visualization using Unicode
+- **Privacy-First**: Local data storage, no telemetry
+- **Smart Notifications**: Usage alerts with 50%/20%/5% thresholds
+- **Modern UI**: Custom SVG icons, CSS styling, dark/light theme support
+- **Auto-Update**: GitHub Releases integration for seamless updates
 
 ## ✨ Why UsageBar?
 
 While macOS users have CodexBar, Linux users were left in the dark—literally. UsageBar was created to bridge that gap, offering:
 
-- **Rich System Tray UI**: Color-coded progress bars (🟢/🟡/🔴) that show your status at a glance.
-- **Expandable Menus**: Deep dives into Session, Weekly, and Model-specific usage (like Claude Sonnet).
-- **Auto-Refresh**: Background updates keep your data fresh without manual intervention.
-- **Detailed Mode**: Toggle technical details like precise reset timestamps and token counts.
-- **Provider Dashboard Shortcuts**: Quick access to your billing and usage pages.
+- **Rich System Tray UI**: Color-coded progress bars (🟢/🟡/🔴) that show your status at a glance
+- **Expandable Menus**: Deep dives into Session, Weekly, and Model-specific usage (like Claude Sonnet)
+- **Auto-Refresh**: Background updates keep your data fresh without manual intervention
+- **Detailed Mode**: Toggle technical details like precise reset timestamps and token counts
+- **Provider Dashboard Shortcuts**: Quick access to your billing and usage pages
+- **Historical Trends**: 24-hour sparkline charts showing usage patterns
 
-## 🛠 Supported Providers on Linux
+## 🛠 Supported Providers
 
 | Provider | Status | Source |
 |----------|--------|--------|
 | **Claude** | ✅ Active | OAuth (Official CLI) |
 | **Codex** | ✅ Active | Official CLI |
 | **Gemini** | ✅ Active | Official CLI |
-| **z.ai** | ✅ Active | Config / Token |
-| **Antigravity** | ⏳ Planned | Desktop Integration |
-| **Cursor** | ⚠️ Limited | macOS Keyring Dependency |
+| **Cursor** | ✅ Active | Official CLI |
+| **Z.ai** | ✅ Active | Config / Token |
+| **Antigravity** | ✅ Active | Official CLI |
+| **Factory** | ✅ Active | Official CLI |
 
-## 🚀 Quick Start
+## 📦 Installation
 
-### 1. Prerequisites
-Ubuntu 24.04+ and Swift 6.0+ are recommended.
-
-### 2. Installation
+### Ubuntu/Debian (.deb)
 ```bash
-# Clone the repository
-git clone https://github.com/user/UsageBar.git
-cd UsageBar
+wget https://github.com/tylerbuilds/UsageBar/releases/latest/download/usagebar_1.0.0_amd64.deb
+sudo dpkg -i usagebar_1.0.0_amd64.deb
+```
 
-# Build the CLI tool
+### AppImage (Universal Linux)
+```bash
+wget https://github.com/tylerbuilds/UsageBar/releases/latest/download/UsageBar-1.0.0-x86_64.AppImage
+chmod +x UsageBar-1.0.0-x86_64.AppImage
+./UsageBar-1.0.0-x86_64.AppImage
+```
+
+### From Source
+```bash
+git clone https://github.com/tylerbuilds/UsageBar.git
+cd UsageBar
 swift build -c release --product CodexBarCLI
 sudo cp .build/release/CodexBarCLI /usr/local/bin/usagebar
-
-# Run the Tray App
 ./usagebar-tray-launcher.sh
 ```
 
-### 3. Setup (API Keys)
-UsageBar pulls data from official CLI tools. For specific providers like **z.ai**, create a config file:
+## 🎯 Quick Start
+
+1. **Configure Providers**: Edit `~/.config/usagebar/config.json`
+2. **Launch**: Run `usagebar-tray-launcher.sh` or start from Applications menu
+3. **View Usage**: Click the tray icon to see real-time stats
+4. **Check History**: Usage data stored in `~/.config/usagebar/history.db`
+
+### Configuration for Token-Based Providers
+
+For providers like **Z.ai**, create a config file:
 ```bash
 mkdir -p ~/.config/codexbar
 echo 'zai_token = "your_token"' > ~/.config/codexbar/config.toml
 ```
 *Your secrets are stored locally and never transmitted to third parties.*
 
-## 📐 Technical Build Details
+## 🛠️ Tech Stack
+
+- **Backend**: Swift 6.0 (CodexBarCLI)
+- **Frontend**: Python 3.8+, GTK3, AppIndicator3
+- **Database**: SQLite (historical tracking)
+- **Styling**: CSS3 with dark/light theme support
+- **Packaging**: Debian (.deb), AppImage
+
+### Architecture
 
 UsageBar is built with a decoupled architecture:
-1. **Core (Swift)**: A high-performance usage bridge that talks to provider APIs and local CLI tools.
-2. **Tray UI (Python/GTK3)**: A lightweight, responsive menu system using `AppIndicator3`.
-3. **Async Hub**: All data fetching happens in background threads to ensure your desktop environment remains buttery smooth.
+1. **Core (Swift)**: A high-performance usage bridge that talks to provider APIs and local CLI tools
+2. **Tray UI (Python/GTK3)**: A lightweight, responsive menu system using `AppIndicator3`
+3. **Async Hub**: All data fetching happens in background threads to ensure your desktop environment remains buttery smooth
 
 ## 🐧 Distro Compatibility
 
-While UsageBar is designed with portability in mind, it is currently primarily tested on **Ubuntu 24.04 (Noble)**. 
+**Tested on**: Ubuntu 24.04 (Noble)
 
-If you get it running on Arch, Fedora, openSUSE, or other distributions, please let us know or submit a PR to update the documentation!
+**Compatible with**: Debian, Fedora, Arch, openSUSE, and other GTK3-based distributions via AppImage.
+
+If you get it running on other distributions, please let us know or submit a PR to update the documentation!
+
+## 📈 Features Roadmap
+
+- [ ] Settings UI (GTK preferences window)
+- [ ] Custom alert thresholds per provider
+- [ ] Export history to CSV/JSON
+- [ ] Cost calculation per provider
+- [ ] Flatpak distribution
 
 ## 🤝 Contributing
 
-We love contributions! Whether it's adding support for new providers or fixing bugs on different Linux flavors, check out [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+We love contributions! Whether it's adding support for new providers or fixing bugs on different Linux flavors, your help is appreciated.
 
 ## 📜 License
 
-Created with ❤️ by **Tyler Casey** ([@TylerIsBuilding](https://x.com/TylerIsBuilding)).  
-Email: [tc@tylerbuilds.com](mailto:tc@tylerbuilds.com)
+Copyright © 2026 Tyler Casey
 
-Licensed under the [MIT License](LICENSE).
+[MIT License](LICENSE)
+
+## 🔗 Links
+
+- **Website**: [www.tylerbuilds.com](https://www.tylerbuilds.com)
+- **GitHub**: [github.com/tylerbuilds](https://github.com/tylerbuilds)
+- **Inspired by**: [CodexBar.app](https://codexbar.app) (macOS)
 
 ---
-*Inspired by [CodexBar.app](https://codexbar.app). This project is not affiliated with the original CodexBar team.*
+
+**Keywords**: `ai-usage-tracker` `linux` `gtk3` `system-tray` `claude` `openai` `api-monitoring` `python` `swift` `ubuntu`
