@@ -1,15 +1,19 @@
-#if os(macOS)
 import Foundation
+#if os(macOS)
 import SQLite3
+#else
+import CSQLite3
+import FoundationNetworking
+#endif
 
-/// Reads cookies from Firefox profile cookie DBs (macOS).
-enum FirefoxCookieImporter {
-    enum ImportError: LocalizedError {
+/// Reads cookies from Firefox profile cookie DBs.
+public enum FirefoxCookieImporter {
+    public enum ImportError: LocalizedError {
         case cookieDBNotFound(path: String)
         case cookieDBNotReadable(path: String)
         case sqliteFailed(message: String)
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case let .cookieDBNotFound(path): "Firefox cookie DB not found at \(path)."
             case let .cookieDBNotReadable(path):
@@ -19,33 +23,44 @@ enum FirefoxCookieImporter {
         }
     }
 
-    struct CookieRecord: Sendable {
-        let host: String
-        let name: String
-        let path: String
-        let value: String
-        let expires: Date?
-        let isSecure: Bool
-        let isHTTPOnly: Bool
+    public struct CookieRecord: Sendable {
+        public let host: String
+        public let name: String
+        public let path: String
+        public let value: String
+        public let expires: Date?
+        public let isSecure: Bool
+        public let isHTTPOnly: Bool
     }
 
-    struct CookieSource: Sendable {
-        let label: String
-        let records: [CookieRecord]
+    public struct CookieSource: Sendable {
+        public let label: String
+        public let records: [CookieRecord]
     }
 
-    static func loadChatGPTCookiesFromAllProfiles() throws -> [CookieSource] {
+    public static func loadChatGPTCookiesFromAllProfiles() throws -> [CookieSource] {
         try self.loadCookiesFromAllProfiles(matchingDomains: ["chatgpt.com", "openai.com"])
     }
 
-    static func loadCookiesFromAllProfiles(matchingDomains domains: [String]) throws -> [CookieSource] {
-        let roots: [(url: URL, labelPrefix: String)] = self.candidateHomes().map { home in
+    public static func loadCookiesFromAllProfiles(matchingDomains domains: [String]) throws -> [CookieSource] {
+        let roots: [(url: URL, labelPrefix: String)] = self.candidateHomes().flatMap { home -> [(URL, String)] in
+            #if os(Linux)
+            // Linux Firefox profiles
+            return [
+                (home.appendingPathComponent(".mozilla").appendingPathComponent("firefox"), "Firefox"),
+                (home.appendingPathComponent(".mozilla").appendingPathComponent("firefox-esr"), "Firefox ESR"),
+                (home.appendingPathComponent("snap").appendingPathComponent("firefox").appendingPathComponent("common").appendingPathComponent(".mozilla").appendingPathComponent("firefox"), "Firefox (Snap)"),
+                (home.appendingPathComponent(".var").appendingPathComponent("app").appendingPathComponent("org.mozilla.firefox").appendingPathComponent(".mozilla").appendingPathComponent("firefox"), "Firefox (Flatpak)"),
+            ]
+            #else
+            // macOS Firefox profiles
             let root = home
                 .appendingPathComponent("Library")
                 .appendingPathComponent("Application Support")
                 .appendingPathComponent("Firefox")
                 .appendingPathComponent("Profiles")
-            return (root, "Firefox")
+            return [(root, "Firefox")]
+            #endif
         }
 
         var candidates: [FirefoxProfileCandidate] = []
@@ -154,7 +169,7 @@ enum FirefoxCookieImporter {
 
     // MARK: - Conversion
 
-    static func makeHTTPCookies(_ records: [CookieRecord]) -> [HTTPCookie] {
+    public static func makeHTTPCookies(_ records: [CookieRecord]) -> [HTTPCookie] {
         records.compactMap { record in
             let domain = Self.normalizeDomain(record.host)
             guard !domain.isEmpty else { return nil }
@@ -234,9 +249,11 @@ enum FirefoxCookieImporter {
     private static func candidateHomes() -> [URL] {
         var homes: [URL] = []
         homes.append(FileManager.default.homeDirectoryForCurrentUser)
+        #if os(macOS)
         if let userHome = NSHomeDirectoryForUser(NSUserName()) {
             homes.append(URL(fileURLWithPath: userHome))
         }
+        #endif
         if let envHome = ProcessInfo.processInfo.environment["HOME"], !envHome.isEmpty {
             homes.append(URL(fileURLWithPath: envHome))
         }
@@ -249,4 +266,3 @@ enum FirefoxCookieImporter {
         }
     }
 }
-#endif

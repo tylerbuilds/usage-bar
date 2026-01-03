@@ -140,7 +140,11 @@ public enum AntigravityStatusProbeError: LocalizedError, Sendable, Equatable {
 public struct AntigravityStatusProbe: Sendable {
     public var timeout: TimeInterval = 8.0
 
-    private static let processName = "language_server_macos"
+    #if os(Linux)
+    private static let processNames = ["language_server_linux", "language_server"]
+    #else
+    private static let processNames = ["language_server_macos", "language_server"]
+    #endif
     private static let getUserStatusPath = "/exa.language_server_pb.LanguageServerService/GetUserStatus"
     private static let commandModelConfigPath =
         "/exa.language_server_pb.LanguageServerService/GetCommandModelConfigs"
@@ -312,7 +316,7 @@ public struct AntigravityStatusProbe: Sendable {
             let text = String(line)
             guard let match = Self.matchProcessLine(text) else { continue }
             let lower = match.command.lowercased()
-            guard lower.contains(Self.processName) else { continue }
+            guard Self.processNames.contains(where: { lower.contains($0) }) else { continue }
             guard Self.isAntigravityCommandLine(lower) else { continue }
             sawAntigravity = true
             guard let token = Self.extractFlag("--csrf_token", from: match.command) else { continue }
@@ -413,6 +417,7 @@ public struct AntigravityStatusProbe: Sendable {
         csrfToken: String,
         timeout: TimeInterval) async -> Bool
     {
+        // Try HTTPS first, then HTTP as fallback (for Linux compatibility)
         do {
             _ = try await self.makeRequest(
                 payload: RequestPayload(
@@ -420,7 +425,7 @@ public struct AntigravityStatusProbe: Sendable {
                     body: self.unleashRequestBody()),
                 context: RequestContext(
                     httpsPort: port,
-                    httpPort: nil,
+                    httpPort: port,  // Also try HTTP on same port
                     csrfToken: csrfToken,
                     timeout: timeout))
             return true
@@ -502,6 +507,14 @@ public struct AntigravityStatusProbe: Sendable {
         payload: RequestPayload,
         context: RequestContext) async throws -> Data
     {
+        #if os(Linux)
+        // On Linux, use curl with -k to handle self-signed certificates
+        return try await sendRequestViaCurl(
+            scheme: scheme,
+            port: port,
+            payload: payload,
+            context: context)
+        #else
         guard let url = URL(string: "\(scheme)://127.0.0.1:\(port)\(payload.path)") else {
             throw AntigravityStatusProbeError.apiError("Invalid URL")
         }
@@ -531,7 +544,49 @@ public struct AntigravityStatusProbe: Sendable {
             throw AntigravityStatusProbeError.apiError("HTTP \(http.statusCode): \(message)")
         }
         return data
+        #endif
     }
+
+    #if os(Linux)
+    private static func sendRequestViaCurl(
+        scheme: String,
+        port: Int,
+        payload: RequestPayload,
+        context: RequestContext) async throws -> Data
+    {
+        let url = "\(scheme)://127.0.0.1:\(port)\(payload.path)"
+        let body = try JSONSerialization.data(withJSONObject: payload.body, options: [])
+        guard let bodyString = String(data: body, encoding: .utf8) else {
+            throw AntigravityStatusProbeError.apiError("Failed to encode body")
+        }
+
+        let result = try await SubprocessRunner.run(
+            binary: "/usr/bin/curl",
+            arguments: [
+                "-s", "-k",  // Silent, insecure (skip SSL verification)
+                "-X", "POST",
+                "-H", "Content-Type: application/json",
+                "-H", "Connect-Protocol-Version: 1",
+                "-H", "X-Codeium-Csrf-Token: \(context.csrfToken)",
+                "-d", bodyString,
+                "--max-time", String(Int(context.timeout)),
+                url
+            ],
+            environment: ProcessInfo.processInfo.environment,
+            timeout: context.timeout + 2,
+            label: "antigravity-curl")
+
+        // Check for curl errors (non-empty stderr typically indicates failure)
+        if !result.stderr.isEmpty && result.stdout.isEmpty {
+            throw AntigravityStatusProbeError.apiError("curl failed: \(result.stderr)")
+        }
+
+        guard let data = result.stdout.data(using: .utf8), !data.isEmpty else {
+            throw AntigravityStatusProbeError.apiError("Empty response from curl")
+        }
+        return data
+    }
+    #endif
 }
 
 private final class InsecureSessionDelegate: NSObject {}

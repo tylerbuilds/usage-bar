@@ -1,6 +1,7 @@
 import Foundation
-
-#if os(macOS)
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 // MARK: - Factory Cookie Importer
 
@@ -46,7 +47,8 @@ public enum FactoryCookieImporter {
         let log: (String) -> Void = { msg in logger?("[factory-cookie] \(msg)") }
         var sessions: [SessionInfo] = []
 
-        // Try Safari first
+        #if os(macOS)
+        // Try Safari first (macOS only)
         do {
             let safariRecords = try SafariCookieImporter.loadCookies(
                 matchingDomains: ["factory.ai", "app.factory.ai", "auth.factory.ai"],
@@ -64,6 +66,7 @@ public enum FactoryCookieImporter {
         } catch {
             log("Safari cookie import failed: \(error.localizedDescription)")
         }
+        #endif
 
         // Try Chrome
         do {
@@ -1058,45 +1061,3 @@ public struct FactoryStatusProbe: Sendable {
             rawJSON: nil)
     }
 }
-
-#else
-
-// MARK: - Factory (Unsupported)
-
-public enum FactoryStatusProbeError: LocalizedError, Sendable {
-    case notSupported
-
-    public var errorDescription: String? {
-        "Factory is only supported on macOS."
-    }
-}
-
-public struct FactoryStatusSnapshot: Sendable {
-    public init() {}
-
-    public func toUsageSnapshot() -> UsageSnapshot {
-        UsageSnapshot(
-            primary: RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
-            secondary: nil,
-            tertiary: nil,
-            providerCost: nil,
-            updatedAt: Date(),
-            accountEmail: nil,
-            accountOrganization: nil,
-            loginMethod: nil)
-    }
-}
-
-public struct FactoryStatusProbe: Sendable {
-    public init(baseURL: URL = URL(string: "https://app.factory.ai")!, timeout: TimeInterval = 15.0) {
-        _ = baseURL
-        _ = timeout
-    }
-
-    public func fetch(logger: ((String) -> Void)? = nil) async throws -> FactoryStatusSnapshot {
-        _ = logger
-        throw FactoryStatusProbeError.notSupported
-    }
-}
-
-#endif

@@ -13,10 +13,19 @@ let package = Package(
     ],
     targets: {
         var targets: [Target] = [
+            // System library for SQLite3 on Linux
+            .systemLibrary(
+                name: "CSQLite3",
+                pkgConfig: "sqlite3",
+                providers: [
+                    .apt(["libsqlite3-dev"]),
+                    .brew(["sqlite3"]),
+                ]),
             .target(
                 name: "CodexBarCore",
                 dependencies: [
                     .product(name: "Logging", package: "swift-log"),
+                    .target(name: "CSQLite3", condition: .when(platforms: [.linux])),
                 ],
                 swiftSettings: []),
             .executableTarget(

@@ -18,8 +18,15 @@ Codexbar.app
 *.tgz
 Icon.iconset
 
-# Misc
-.DS_Store
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Config & Logs
+.config/
+/tmp/usagebar*
+*.log
 
 # Swift Package Manager metadata (leave sources tracked)
 # Packages/

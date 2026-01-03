@@ -1,8 +1,12 @@
-#if os(macOS)
-import CommonCrypto
 import Foundation
-import Security
+#if os(macOS)
 import SQLite3
+import CommonCrypto
+import Security
+#else
+import CSQLite3
+import FoundationNetworking
+#endif
 
 /// Reads ChatGPT/OpenAI cookies from a local Chromium cookie DB (Google Chrome by default).
 ///
@@ -13,18 +17,22 @@ import SQLite3
 /// - Chrome stores cookie values in an SQLite DB, and most values are encrypted (`encrypted_value` starts
 ///   with `v10` on macOS). Decryption uses the "Chrome Safe Storage" password from the macOS Keychain and
 ///   AES-CBC + PBKDF2. This is inherently brittle across Chrome encryption changes; keep it best-effort.
+/// - On Linux, cookies may be unencrypted (plaintext) or encrypted with GNOME Keyring/KDE Wallet.
+///   We try plaintext first and fail gracefully if encrypted.
 /// - We never persist the imported cookies ourselves. We only inject them into WebKit's `WKWebsiteDataStore`
 ///   cookie jar for the chosen CodexBar dashboard account.
-enum ChromeCookieImporter {
+public enum ChromeCookieImporter {
+    #if os(macOS)
     private static let chromeSafeStorageKeyLock = NSLock()
     private nonisolated(unsafe) static var cachedChromeSafeStorageKey: Data?
+    #endif
 
-    enum ImportError: LocalizedError {
+    public enum ImportError: LocalizedError {
         case cookieDBNotFound(path: String)
         case keychainDenied
         case sqliteFailed(message: String)
 
-        var errorDescription: String? {
+        public var errorDescription: String? {
             switch self {
             case let .cookieDBNotFound(path): "Chrome Cookies DB not found at \(path)."
             case .keychainDenied: "macOS Keychain denied access to Chrome Safe Storage."
@@ -33,30 +41,42 @@ enum ChromeCookieImporter {
         }
     }
 
-    struct CookieRecord: Sendable {
-        let hostKey: String
-        let name: String
-        let path: String
-        let expiresUTC: Int64
-        let isSecure: Bool
-        let isHTTPOnly: Bool
-        let value: String
+    public struct CookieRecord: Sendable {
+        public let hostKey: String
+        public let name: String
+        public let path: String
+        public let expiresUTC: Int64
+        public let isSecure: Bool
+        public let isHTTPOnly: Bool
+        public let value: String
     }
 
-    struct CookieSource: Sendable {
-        let label: String
-        let records: [CookieRecord]
+    public struct CookieSource: Sendable {
+        public let label: String
+        public let records: [CookieRecord]
     }
 
-    static func loadChatGPTCookiesFromAllProfiles() throws -> [CookieSource] {
+    public static func loadChatGPTCookiesFromAllProfiles() throws -> [CookieSource] {
         try self.loadCookiesFromAllProfiles(matchingDomains: ["chatgpt.com", "openai.com"])
     }
 
     /// Loads cookies from all Chrome profiles matching the given domains.
     /// - Parameter matchingDomains: Array of domain patterns to match (e.g., ["claude.ai"])
     /// - Returns: Array of cookie sources with matching records
-    static func loadCookiesFromAllProfiles(matchingDomains domains: [String]) throws -> [CookieSource] {
+    public static func loadCookiesFromAllProfiles(matchingDomains domains: [String]) throws -> [CookieSource] {
         let roots: [(url: URL, labelPrefix: String)] = self.candidateHomes().flatMap { home in
+            #if os(Linux)
+            let configDir = home.appendingPathComponent(".config")
+            return [
+                (configDir.appendingPathComponent("google-chrome"), "Chrome"),
+                (configDir.appendingPathComponent("google-chrome-beta"), "Chrome Beta"),
+                (configDir.appendingPathComponent("google-chrome-unstable"), "Chrome Canary"),
+                (configDir.appendingPathComponent("chromium"), "Chromium"),
+                (configDir.appendingPathComponent("BraveSoftware").appendingPathComponent("Brave-Browser"), "Brave"),
+                (configDir.appendingPathComponent("vivaldi"), "Vivaldi"),
+                (configDir.appendingPathComponent("microsoft-edge"), "Edge"),
+            ]
+            #else
             let appSupport = home
                 .appendingPathComponent("Library")
                 .appendingPathComponent("Application Support")
@@ -69,6 +89,7 @@ enum ChromeCookieImporter {
                 (appSupport.appendingPathComponent("Arc Canary").appendingPathComponent("User Data"), "Arc Canary"),
                 (appSupport.appendingPathComponent("Chromium"), "Chromium"),
             ]
+            #endif
         }
 
         var candidates: [ChromeProfileCandidate] = []
@@ -80,6 +101,7 @@ enum ChromeCookieImporter {
             throw ImportError.cookieDBNotFound(path: display)
         }
 
+        #if os(macOS)
         let chromeKey = try Self.chromeSafeStorageKey()
         return try candidates.compactMap { candidate in
             guard FileManager.default.fileExists(atPath: candidate.cookiesDB.path) else { return nil }
@@ -90,23 +112,23 @@ enum ChromeCookieImporter {
             guard !records.isEmpty else { return nil }
             return CookieSource(label: candidate.label, records: records)
         }
+        #else
+        // On Linux, try to read cookies without decryption (plaintext or fail)
+        return try candidates.compactMap { candidate in
+            guard FileManager.default.fileExists(atPath: candidate.cookiesDB.path) else { return nil }
+            let records = try Self.readCookiesFromLockedChromeDBLinux(
+                sourceDB: candidate.cookiesDB,
+                matchingDomains: domains)
+            guard !records.isEmpty else { return nil }
+            return CookieSource(label: candidate.label, records: records)
+        }
+        #endif
     }
 
     // MARK: - DB copy helper
 
-    private static func readCookiesFromLockedChromeDB(sourceDB: URL, key: Data) throws -> [CookieRecord] {
-        try self.readCookiesFromLockedChromeDB(
-            sourceDB: sourceDB,
-            key: key,
-            matchingDomains: ["chatgpt.com", "openai.com"])
-    }
-
-    private static func readCookiesFromLockedChromeDB(
-        sourceDB: URL,
-        key: Data,
-        matchingDomains: [String]) throws -> [CookieRecord]
-    {
-        // Chrome keeps the DB locked; copy the DB (and wal/shm when present) to a temp folder before reading.
+    /// Copies Chrome DB to temp directory (Chrome keeps DB locked)
+    private static func copyDBToTemp(sourceDB: URL) throws -> (tempDir: URL, copiedDB: URL) {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("codexbar-chrome-cookies-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -122,12 +144,54 @@ enum ChromeCookieImporter {
             }
         }
 
-        defer { try? FileManager.default.removeItem(at: tempDir) }
-
-        return try Self.readCookies(fromDB: copiedDB.path, key: key, matchingDomains: matchingDomains)
+        return (tempDir, copiedDB)
     }
 
-    // MARK: - SQLite read
+    #if os(macOS)
+    private static func readCookiesFromLockedChromeDB(sourceDB: URL, key: Data) throws -> [CookieRecord] {
+        try self.readCookiesFromLockedChromeDB(
+            sourceDB: sourceDB,
+            key: key,
+            matchingDomains: ["chatgpt.com", "openai.com"])
+    }
+
+    private static func readCookiesFromLockedChromeDB(
+        sourceDB: URL,
+        key: Data,
+        matchingDomains: [String]) throws -> [CookieRecord]
+    {
+        let (tempDir, copiedDB) = try copyDBToTemp(sourceDB: sourceDB)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        return try Self.readCookies(fromDB: copiedDB.path, key: key, matchingDomains: matchingDomains)
+    }
+    #else
+    private static func readCookiesFromLockedChromeDBLinux(
+        sourceDB: URL,
+        matchingDomains: [String]) throws -> [CookieRecord]
+    {
+        let (tempDir, copiedDB) = try copyDBToTemp(sourceDB: sourceDB)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        return try Self.readCookiesLinux(fromDB: copiedDB.path, matchingDomains: matchingDomains)
+    }
+    #endif
+
+    // MARK: - SQLite read helpers
+
+    private static func readTextColumn(_ stmt: OpaquePointer?, index: Int32) -> String? {
+        guard sqlite3_column_type(stmt, index) != SQLITE_NULL else { return nil }
+        guard let c = sqlite3_column_text(stmt, index) else { return nil }
+        return String(cString: c)
+    }
+
+    private static func readBlobColumn(_ stmt: OpaquePointer?, index: Int32) -> Data? {
+        guard sqlite3_column_type(stmt, index) != SQLITE_NULL else { return nil }
+        guard let bytes = sqlite3_column_blob(stmt, index) else { return nil }
+        let count = Int(sqlite3_column_bytes(stmt, index))
+        return Data(bytes: bytes, count: count)
+    }
+
+    #if os(macOS)
+    // MARK: - SQLite read (macOS with decryption)
 
     private static func readCookies(fromDB path: String, key: Data) throws -> [CookieRecord] {
         try self.readCookies(fromDB: path, key: key, matchingDomains: ["chatgpt.com", "openai.com"])
@@ -190,21 +254,88 @@ enum ChromeCookieImporter {
         }
         return out
     }
+    #else
+    // MARK: - SQLite read (Linux - plaintext only)
 
-    private static func readTextColumn(_ stmt: OpaquePointer?, index: Int32) -> String? {
-        guard sqlite3_column_type(stmt, index) != SQLITE_NULL else { return nil }
-        guard let c = sqlite3_column_text(stmt, index) else { return nil }
-        return String(cString: c)
+    private static func readCookiesLinux(
+        fromDB path: String,
+        matchingDomains: [String]) throws -> [CookieRecord]
+    {
+        var db: OpaquePointer?
+        if sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) != SQLITE_OK {
+            throw ImportError.sqliteFailed(message: String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_close(db) }
+
+        // Build WHERE clause dynamically for the given domains
+        let conditions = matchingDomains.map { "host_key LIKE '%\($0)%'" }.joined(separator: " OR ")
+        let sql = """
+        SELECT host_key, name, path, expires_utc, is_secure, is_httponly, value, encrypted_value
+        FROM cookies
+        WHERE \(conditions)
+        """
+
+        var stmt: OpaquePointer?
+        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) != SQLITE_OK {
+            throw ImportError.sqliteFailed(message: String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(stmt) }
+
+        var out: [CookieRecord] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let hostKey = String(cString: sqlite3_column_text(stmt, 0))
+            let name = String(cString: sqlite3_column_text(stmt, 1))
+            let path = String(cString: sqlite3_column_text(stmt, 2))
+            let expires = sqlite3_column_int64(stmt, 3)
+            let isSecure = sqlite3_column_int(stmt, 4) != 0
+            let isHTTPOnly = sqlite3_column_int(stmt, 5) != 0
+
+            let plain = Self.readTextColumn(stmt, index: 6)
+            let enc = Self.readBlobColumn(stmt, index: 7)
+
+            // On Linux, try plaintext first, then try to decode encrypted value as UTF-8
+            // (some Linux Chrome installs store cookies unencrypted)
+            let value: String
+            if let plain, !plain.isEmpty {
+                value = plain
+            } else if let enc, !enc.isEmpty {
+                // Try to decode as plaintext (some Linux installs don't encrypt)
+                // Skip the v10/v11 prefix if present
+                let payload: Data
+                if enc.count > 3 {
+                    let prefix = String(data: enc.prefix(3), encoding: .utf8) ?? ""
+                    if prefix == "v10" || prefix == "v11" {
+                        // Encrypted - skip for now (would need keyring integration)
+                        continue
+                    }
+                    payload = enc
+                } else {
+                    payload = enc
+                }
+                if let decoded = String(data: payload, encoding: .utf8), !decoded.isEmpty {
+                    value = decoded
+                } else {
+                    continue
+                }
+            } else {
+                continue
+            }
+
+            out.append(CookieRecord(
+                hostKey: hostKey,
+                name: name,
+                path: path,
+                expiresUTC: expires,
+                isSecure: isSecure,
+                isHTTPOnly: isHTTPOnly,
+                value: value))
+        }
+        return out
     }
+    #endif
 
-    private static func readBlobColumn(_ stmt: OpaquePointer?, index: Int32) -> Data? {
-        guard sqlite3_column_type(stmt, index) != SQLITE_NULL else { return nil }
-        guard let bytes = sqlite3_column_blob(stmt, index) else { return nil }
-        let count = Int(sqlite3_column_bytes(stmt, index))
-        return Data(bytes: bytes, count: count)
-    }
-
-    // MARK: - Keychain + crypto
+    #if os(macOS)
+    // MARK: - Keychain + crypto (macOS only)
 
     private static func chromeSafeStorageKey() throws -> Data {
         self.chromeSafeStorageKeyLock.lock()
@@ -342,10 +473,11 @@ enum ChromeCookieImporter {
         guard let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
+    #endif
 
     // MARK: - Conversion
 
-    static func makeHTTPCookies(_ records: [CookieRecord]) -> [HTTPCookie] {
+    public static func makeHTTPCookies(_ records: [CookieRecord]) -> [HTTPCookie] {
         records.compactMap { record in
             let domain = Self.normalizeDomain(record.hostKey)
             guard !domain.isEmpty else { return nil }
@@ -431,9 +563,11 @@ enum ChromeCookieImporter {
     private static func candidateHomes() -> [URL] {
         var homes: [URL] = []
         homes.append(FileManager.default.homeDirectoryForCurrentUser)
+        #if os(macOS)
         if let userHome = NSHomeDirectoryForUser(NSUserName()) {
             homes.append(URL(fileURLWithPath: userHome))
         }
+        #endif
         if let envHome = ProcessInfo.processInfo.environment["HOME"], !envHome.isEmpty {
             homes.append(URL(fileURLWithPath: envHome))
         }
@@ -446,4 +580,3 @@ enum ChromeCookieImporter {
         }
     }
 }
-#endif

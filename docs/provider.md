@@ -15,7 +15,7 @@ Goal: adding a provider should feel like:
 - done (tests + docs)
 
 This doc is both:
-- **how it works today** (CodexBar 2025-12)
+- **how it works today** (CodexBar 2026-01)
 - **target shape** (what we should refactor towards)
 
 ## Terms

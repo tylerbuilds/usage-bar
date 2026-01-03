@@ -1,134 +1,82 @@
-# UsageBar for Linux
+# UsageBar 🚀
 
-**CodexBar v0.14.0 ported to Ubuntu/Linux**
+**The premium AI usage tracker for Linux.**
 
-Track your AI usage across multiple providers from the command line.
+UsageBar is a Linux-native system tray application that provides real-time visibility into your AI provider limits. Inspired by the excellent [CodexBar.app](https://codexbar.app) for macOS, UsageBar brings a rich, expandable UI to Ubuntu and other Linux distributions, ensuring you never hit a "limit reached" surprise again.
 
-## ✅ Supported Providers on Linux
+![UsageBar Tray Preview](codexbar.png)
 
-| Provider | Status | Notes |
-|----------|--------|-------|
-| **Claude** | ✅ Working | Uses OAuth (default on Linux) |
-| **Codex** | ✅ Working | CLI-based |
-| **Gemini** | ✅ Working | CLI-based |
-| **z.ai** | ✅ Working | API token in config file |
+## ✨ Why UsageBar?
 
-### ⚠️ Unsupported on Linux
+While macOS users have CodexBar, Linux users were left in the dark—literally. UsageBar was created to bridge that gap, offering:
 
-- **Cursor** - macOS-only (requires browser cookie decryption)
-- **Factory** - macOS-only
-- **Antigravity** - Language server not exposing required ports
+- **Rich System Tray UI**: Color-coded progress bars (🟢/🟡/🔴) that show your status at a glance.
+- **Expandable Menus**: Deep dives into Session, Weekly, and Model-specific usage (like Claude Sonnet).
+- **Auto-Refresh**: Background updates keep your data fresh without manual intervention.
+- **Detailed Mode**: Toggle technical details like precise reset timestamps and token counts.
+- **Provider Dashboard Shortcuts**: Quick access to your billing and usage pages.
 
-## Installation
+## 🛠 Supported Providers on Linux
 
-### Prerequisites
+| Provider | Status | Source |
+|----------|--------|--------|
+| **Claude** | ✅ Active | OAuth (Official CLI) |
+| **Codex** | ✅ Active | Official CLI |
+| **Gemini** | ✅ Active | Official CLI |
+| **z.ai** | ✅ Active | Config / Token |
+| **Antigravity** | ⏳ Planned | Desktop Integration |
+| **Cursor** | ⚠️ Limited | macOS Keyring Dependency |
 
-Ubuntu 24.04 (Noble) with Swift 6.0+:
+## 🚀 Quick Start
 
+### 1. Prerequisites
+Ubuntu 24.04+ and Swift 6.0+ are recommended.
+
+### 2. Installation
 ```bash
-# Install Swift 6.0.3
-wget -q https://download.swift.org/swift-6.0.3-release/ubuntu2404/swift-6.0.3-RELEASE/swift-6.0.3-RELEASE-ubuntu24.04.tar.gz -O /tmp/swift.tar.gz
-cd /tmp
-tar xzf swift.tar.gz
-sudo mv swift-6.0.3-RELEASE-ubuntu24.04 /usr/share/swift
-sudo ln -sf /usr/share/swift/usr/bin/swift /usr/bin/swift
-sudo ln -sf /usr/share/swift/usr/bin/swiftc /usr/bin/swiftc
+# Clone the repository
+git clone https://github.com/user/UsageBar.git
+cd UsageBar
+
+# Build the CLI tool
+swift build -c release --product CodexBarCLI
+sudo cp .build/release/CodexBarCLI /usr/local/bin/usagebar
+
+# Run the Tray App
+./usagebar-tray-launcher.sh
 ```
 
-### Build from Source
-
-```bash
-git clone <this-repo> /tmp/usagebar-build
-cd /tmp/usagebar-build
-swift build --product CodexBarCLI
-sudo cp .build/debug/CodexBarCLI /usr/local/bin/usagebar
-```
-
-## Configuration
-
-### z.ai API Token
-
-Create `~/.config/codexbar/config.toml`:
-
-```toml
-[zai]
-zai_token = "your_api_token_here"
-```
-
-Or set environment variable:
-
-```bash
-export Z_AI_API_KEY="your_api_token_here"
-```
-
-### Claude OAuth
-
-Claude uses OAuth by default on Linux. Make sure you're authenticated:
-
-```bash
-# Check if claude CLI is authenticated
-claude --version
-
-# OAuth will be used automatically by usagebar
-```
-
-## Usage
-
-```bash
-# Check all providers
-usagebar usage --provider all
-
-# Check specific provider
-usagebar usage --provider claude
-usagebar usage --provider codex
-usagebar usage --provider gemini
-usagebar usage --provider zai
-
-# JSON output
-usagebar usage --provider all --format json --pretty
-
-# Use specific source (web only works on macOS)
-usagebar usage --source cli       # Use CLI probes
-usagebar usage --source oauth     # Use OAuth (Claude only)
-```
-
-## Changes from CodexBar
-
-### Linux-Specific Modifications
-
-1. **Claude defaults to OAuth** - The CLI probe (`/usage` command) was repurposed in Claude v2.0.76+ to show memory context instead of API usage. On Linux, we now default to OAuth.
-
-2. **Web source restricted to macOS** - Browser cookie import uses macOS Keychain. On Linux, `--source web` is disabled; use `--source cli` or `--source oauth` instead.
-
-3. **z.ai config file support** - Added `~/.config/codexbar/config.toml` for storing API tokens on Linux (alternative to macOS Keychain).
-
-4. **Swift 6.0 compatibility** - Downgraded from Swift 6.2 to Swift 6.0 for Ubuntu compatibility, removed experimental feature flags.
-
-### Package.swift Changes
-
-```swift
-// swift-tools-version: 6.0  // Downgraded from 6.2
-```
-
-### Files Modified
-
-- `Sources/CodexBarCLI/CLIEntry.swift` - Platform-specific source handling
-- `Sources/CodexBarCore/Providers/Zai/ZaiSettingsReader.swift` - Config file support
-- `Sources/CodexBarCore/Providers/Zai/ZaiUsageStats.swift` - Linux networking imports
-- `Package.swift` - Swift version compatibility
-
-## Troubleshooting
-
-### Claude shows "Missing Current session" error
-
-**Solution:** This is expected with Claude CLI v2.0.76+. We fixed this by defaulting to OAuth on Linux. Make sure you're not using `--source cli` for Claude.
-
-### z.ai shows "API token not found"
-
-**Solution:** Create `~/.config/codexbar/config.toml` with your token:
-
+### 3. Setup (API Keys)
+UsageBar pulls data from official CLI tools. For specific providers like **z.ai**, create a config file:
 ```bash
 mkdir -p ~/.config/codexbar
-cat > ~/.config/codexbar/config.toml << EOF
-[zai]
-zai_token = "your_token_here"
+echo 'zai_token = "your_token"' > ~/.config/codexbar/config.toml
+```
+*Your secrets are stored locally and never transmitted to third parties.*
+
+## 📐 Technical Build Details
+
+UsageBar is built with a decoupled architecture:
+1. **Core (Swift)**: A high-performance usage bridge that talks to provider APIs and local CLI tools.
+2. **Tray UI (Python/GTK3)**: A lightweight, responsive menu system using `AppIndicator3`.
+3. **Async Hub**: All data fetching happens in background threads to ensure your desktop environment remains buttery smooth.
+
+## 🐧 Distro Compatibility
+
+While UsageBar is designed with portability in mind, it is currently primarily tested on **Ubuntu 24.04 (Noble)**. 
+
+If you get it running on Arch, Fedora, openSUSE, or other distributions, please let us know or submit a PR to update the documentation!
+
+## 🤝 Contributing
+
+We love contributions! Whether it's adding support for new providers or fixing bugs on different Linux flavors, check out [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+## 📜 License
+
+Created with ❤️ by **Tyler Casey** ([@TylerIsBuilding](https://x.com/TylerIsBuilding)).  
+Email: [tc@tylerbuilds.com](mailto:tc@tylerbuilds.com)
+
+Licensed under the [MIT License](LICENSE).
+
+---
+*Inspired by [CodexBar.app](https://codexbar.app). This project is not affiliated with the original CodexBar team.*

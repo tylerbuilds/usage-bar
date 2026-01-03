@@ -1,6 +1,5 @@
 import Foundation
 
-#if os(macOS)
 enum FactoryLocalStorageImporter {
     struct TokenInfo: Sendable {
         let refreshToken: String
@@ -36,7 +35,19 @@ enum FactoryLocalStorageImporter {
     }
 
     private static func chromeLocalStorageCandidates() -> [LocalStorageCandidate] {
-        let roots: [(url: URL, labelPrefix: String)] = self.candidateHomes().flatMap { home in
+        let roots: [(url: URL, labelPrefix: String)] = self.candidateHomes().flatMap { home -> [(URL, String)] in
+            #if os(Linux)
+            let configDir = home.appendingPathComponent(".config")
+            return [
+                (configDir.appendingPathComponent("google-chrome"), "Chrome"),
+                (configDir.appendingPathComponent("google-chrome-beta"), "Chrome Beta"),
+                (configDir.appendingPathComponent("google-chrome-unstable"), "Chrome Canary"),
+                (configDir.appendingPathComponent("chromium"), "Chromium"),
+                (configDir.appendingPathComponent("BraveSoftware").appendingPathComponent("Brave-Browser"), "Brave"),
+                (configDir.appendingPathComponent("vivaldi"), "Vivaldi"),
+                (configDir.appendingPathComponent("microsoft-edge"), "Edge"),
+            ]
+            #else
             let appSupport = home
                 .appendingPathComponent("Library")
                 .appendingPathComponent("Application Support")
@@ -49,6 +60,7 @@ enum FactoryLocalStorageImporter {
                 (appSupport.appendingPathComponent("Arc Canary").appendingPathComponent("User Data"), "Arc Canary"),
                 (appSupport.appendingPathComponent("Chromium"), "Chromium"),
             ]
+            #endif
         }
 
         var candidates: [LocalStorageCandidate] = []
@@ -87,9 +99,11 @@ enum FactoryLocalStorageImporter {
     private static func candidateHomes() -> [URL] {
         var homes: [URL] = []
         homes.append(FileManager.default.homeDirectoryForCurrentUser)
+        #if os(macOS)
         if let userHome = NSHomeDirectoryForUser(NSUserName()) {
             homes.append(URL(fileURLWithPath: userHome))
         }
+        #endif
         if let envHome = ProcessInfo.processInfo.environment["HOME"], !envHome.isEmpty {
             homes.append(URL(fileURLWithPath: envHome))
         }
@@ -163,4 +177,3 @@ enum FactoryLocalStorageImporter {
         return String(contents[tokenRange])
     }
 }
-#endif

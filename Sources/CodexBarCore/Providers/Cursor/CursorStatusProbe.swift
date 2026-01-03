@@ -1,6 +1,7 @@
 import Foundation
-
-#if os(macOS)
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 // MARK: - Cursor Cookie Importer
 
@@ -30,7 +31,8 @@ public enum CursorCookieImporter {
     public static func importSession(logger: ((String) -> Void)? = nil) throws -> SessionInfo {
         let log: (String) -> Void = { msg in logger?("[cursor-cookie] \(msg)") }
 
-        // Try Safari first
+        #if os(macOS)
+        // Try Safari first (macOS only)
         do {
             let safariRecords = try SafariCookieImporter.loadCookies(
                 matchingDomains: ["cursor.com", "cursor.sh"],
@@ -47,6 +49,7 @@ public enum CursorCookieImporter {
         } catch {
             log("Safari cookie import failed: \(error.localizedDescription)")
         }
+        #endif
 
         // Try Chrome
         do {
@@ -611,45 +614,3 @@ public struct CursorStatusProbe: Sendable {
             rawJSON: nil)
     }
 }
-
-#else
-
-// MARK: - Cursor (Unsupported)
-
-public enum CursorStatusProbeError: LocalizedError, Sendable {
-    case notSupported
-
-    public var errorDescription: String? {
-        "Cursor is only supported on macOS."
-    }
-}
-
-public struct CursorStatusSnapshot: Sendable {
-    public init() {}
-
-    public func toUsageSnapshot() -> UsageSnapshot {
-        UsageSnapshot(
-            primary: RateWindow(usedPercent: 0, windowMinutes: nil, resetsAt: nil, resetDescription: nil),
-            secondary: nil,
-            tertiary: nil,
-            providerCost: nil,
-            updatedAt: Date(),
-            accountEmail: nil,
-            accountOrganization: nil,
-            loginMethod: nil)
-    }
-}
-
-public struct CursorStatusProbe: Sendable {
-    public init(baseURL: URL = URL(string: "https://cursor.com")!, timeout: TimeInterval = 15.0) {
-        _ = baseURL
-        _ = timeout
-    }
-
-    public func fetch(logger: ((String) -> Void)? = nil) async throws -> CursorStatusSnapshot {
-        _ = logger
-        throw CursorStatusProbeError.notSupported
-    }
-}
-
-#endif
