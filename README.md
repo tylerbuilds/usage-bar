@@ -2,7 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Platform: Linux](https://img.shields.io/badge/Platform-Linux-orange.svg)
-![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-green.svg)
+![Version: 0.0.2](https://img.shields.io/badge/Version-0.0.2-green.svg)
 
 UsageBar is a CLI/IDE usage tracker for LLM providers on Linux that lives in the top bar. The Linux port of CodexBar, built with GTK3 and Python.
 
@@ -47,23 +47,43 @@ While macOS users have CodexBar, Linux users were left in the dark—literally. 
 
 ## 📦 Installation
 
+### Quick Install (Static Binary - Recommended)
+
+**No Swift runtime required!** The v0.0.2 static binary works on any Linux distro.
+
+```bash
+# Download static binary (22MB)
+wget https://github.com/tylerbuilds/usage-bar/releases/download/v0.0.2/usagebar-0.0.2-linux-x86_64-static.tar.gz
+tar xzf usagebar-0.0.2-linux-x86_64-static.tar.gz
+
+# Install binary
+sudo cp usagebar /usr/local/bin/usagebar
+usagebar --version
+
+# Install Python dependencies
+sudo apt install python3-gi gir1.2-appindicator3-0.1 libsqlite3-0
+
+# Run the tray app
+./usagebar-tray-launcher.sh
+```
+
 ### Ubuntu/Debian (.deb)
 ```bash
-wget https://github.com/tylerbuilds/UsageBar/releases/latest/download/usagebar_1.0.0_amd64.deb
-sudo dpkg -i usagebar_1.0.0_amd64.deb
+wget https://github.com/tylerbuilds/usage-bar/releases/download/v0.0.2/usagebar_0.0.2_amd64.deb
+sudo dpkg -i usagebar_0.0.2_amd64.deb
 ```
 
 ### AppImage (Universal Linux)
 ```bash
-wget https://github.com/tylerbuilds/UsageBar/releases/latest/download/UsageBar-1.0.0-x86_64.AppImage
-chmod +x UsageBar-1.0.0-x86_64.AppImage
-./UsageBar-1.0.0-x86_64.AppImage
+wget https://github.com/tylerbuilds/usage-bar/releases/download/v0.0.2/UsageBar-0.0.2-x86_64.AppImage
+chmod +x UsageBar-0.0.2-x86_64.AppImage
+./UsageBar-0.0.2-x86_64.AppImage
 ```
 
 ### From Source
 ```bash
-git clone https://github.com/tylerbuilds/UsageBar.git
-cd UsageBar
+git clone https://github.com/tylerbuilds/usage-bar.git
+cd usage-bar
 swift build -c release --product CodexBarCLI
 sudo cp .build/release/CodexBarCLI /usr/local/bin/usagebar
 ./usagebar-tray-launcher.sh

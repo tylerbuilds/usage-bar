@@ -1,4 +1,13 @@
-usagebar (1.0.0) unstable; urgency=medium
+usagebar (0.0.2) unstable; urgency=medium
+
+  * Static binary with no Swift runtime dependency
+  * Full Linux distribution support
+  * Pre-built binaries for x86_64 and aarch64
+  * Updated installation documentation
+
+ -- Tyler Casey <tc@tylerbuilds.com>  Fri, 03 Jan 2026 22:55:00 -0000
+
+usagebar (0.0.1) unstable; urgency=medium
 
   * Initial release
   * Multi-provider AI usage tracking

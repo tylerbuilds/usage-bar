@@ -10,7 +10,7 @@ import json
 from typing import Optional, Dict
 
 # Current version
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "0.0.2"
 REPO_API = "https://api.github.com/repos/tylerisbuilding/UsageBar/releases/latest"
 CACHE_FILE = "~/.config/usagebar/update_check.txt"
 
