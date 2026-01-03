@@ -62,6 +62,7 @@ Package.resolved
 *.swp
 *.swo
 *~
+.claude/
 
 # OS
 .DS_Store
