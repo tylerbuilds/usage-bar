@@ -4,11 +4,9 @@
 ![Platform: Linux](https://img.shields.io/badge/Platform-Linux-orange.svg)
 ![Version: 0.0.2](https://img.shields.io/badge/Version-0.0.2-green.svg)
 
-UsageBar is a CLI/IDE usage tracker for LLM providers on Linux that lives in the top bar. The Linux port of CodexBar, built with GTK3 and Python.
+UsageBar is a CLI/IDE usage tracker for LLM providers on Linux that lives in the top bar. Inspired by steipete's CodexBar.
 
 **[www.tylerbuilds.com](https://www.tylerbuilds.com) | [github.com/tylerbuilds](https://github.com/tylerbuilds)**
-
-![UsageBar Tray Preview](codexbar.png)
 
 ## ✨ Features
 
@@ -24,7 +22,7 @@ UsageBar is a CLI/IDE usage tracker for LLM providers on Linux that lives in the
 
 ## ✨ Why UsageBar?
 
-While macOS users have CodexBar, Linux users were left in the dark—literally. UsageBar bridges that gap by running in the top bar and offering:
+Inspired by steipete's CodexBar for macOS, UsageBar brings similar LLM usage tracking capabilities to Linux. It runs in the top bar and offers:
 
 - **Rich Top Bar UI**: Color-coded progress bars (🟢/🟡/🔴) that show your status at a glance
 - **Expandable Menus**: Deep dives into Session, Weekly, and Model-specific usage (like Claude Sonnet)
@@ -152,7 +150,7 @@ Copyright © 2026 Tyler Casey
 
 - **Website**: [www.tylerbuilds.com](https://www.tylerbuilds.com)
 - **GitHub**: [github.com/tylerbuilds](https://github.com/tylerbuilds)
-- **Inspired by**: [CodexBar.app](https://codexbar.app) (macOS)
+- **Inspired by**: [CodexBar](https://github.com/steipete/codexbar) by steipete
 
 ---
 
