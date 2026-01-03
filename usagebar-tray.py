@@ -13,12 +13,13 @@ import gi
 try:
     gi.require_version('Gtk', '3.0')
     gi.require_version('AppIndicator3', '0.1')
+    gi.require_version('Gdk', '3.0')
 except ValueError as e:
     print(f"Error: Missing system dependencies. {e}")
     print("Please install libappindicator3-1 and python3-gi.")
     sys.exit(1)
 
-from gi.repository import Gtk, AppIndicator3, GLib
+from gi.repository import Gtk, AppIndicator3, GLib, Gdk, GdkPixbuf
 import subprocess
 import json
 import sys
@@ -32,6 +33,11 @@ import os
 # Application directory for settings
 CONFIG_DIR = os.path.expanduser("~/.config/usagebar")
 SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
+
+# Assets directory (icons, CSS, etc.)
+ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+ICONS_DIR = os.path.join(ASSETS_DIR, "icons")
+CSS_FILE = os.path.join(ASSETS_DIR, "style.css")
 
 # Provider display configuration
 # Icons and Dashboard URLs
@@ -53,11 +59,22 @@ class UsageBarTray:
 
     def __init__(self):
         print("[UsageBar] Initializing system tray application...")
-        
+
+        # Load custom CSS styling
+        self.load_css()
+
         # Initialize the AppIndicator
+        # Try to use custom icon, fallback to system icon
+        icon_path = os.path.join(ICONS_DIR, "usagebar-icon.svg")
+        if os.path.exists(icon_path):
+            icon_name = icon_path
+        else:
+            icon_name = "utilities-system-monitor"
+            print(f"[UsageBar] Warning: Custom icon not found, using system icon")
+
         self.indicator = AppIndicator3.Indicator.new(
             "usagebar-tray",
-            "utilities-system-monitor", # Standard system icon name
+            icon_name,
             AppIndicator3.IndicatorCategory.APPLICATION_STATUS
         )
         self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
@@ -66,7 +83,7 @@ class UsageBarTray:
         self.provider_data = []
         self.last_refresh = None
         self.is_refreshing = False
-        
+
         # Load user settings or set defaults
         self.load_settings()
 
@@ -75,9 +92,10 @@ class UsageBarTray:
 
         # Trigger the first data fetch
         GLib.timeout_add(500, self.trigger_refresh)
-        
+
         # Schedule periodic background refreshes
         GLib.timeout_add_seconds(self.refresh_interval, self.trigger_refresh_loop)
+
         print("[UsageBar] Initialization complete.")
 
     def load_settings(self):
@@ -92,6 +110,44 @@ class UsageBarTray:
                     self.show_details = s.get('show_details', False)
         except Exception as e:
             print(f"[UsageBar] Warning: Failed to load settings: {e}")
+
+    def load_css(self):
+        """Apply custom CSS styling to the application with theme detection."""
+        if not os.path.exists(CSS_FILE):
+            print(f"[UsageBar] CSS file not found at {CSS_FILE}, using default styling")
+            return
+
+        try:
+            style_provider = Gtk.CssProvider()
+
+            # Load CSS from file
+            style_provider.load_from_path(CSS_FILE)
+
+            # Detect if system is in dark mode
+            settings = Gtk.Settings.get_default()
+            is_dark = settings.get_property("gtk-application-prefer-dark-theme")
+
+            # Apply to default screen
+            screen = Gdk.Screen.get_default()
+            if screen:
+                Gtk.StyleContext.add_provider_for_screen(
+                    screen,
+                    style_provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                )
+
+                theme_name = "dark" if is_dark else "light"
+                print(f"[UsageBar] Custom CSS loaded from {CSS_FILE} ({theme_name} theme)")
+        except Exception as e:
+            print(f"[UsageBar] Warning: Failed to load CSS: {e}")
+
+    def detect_system_theme(self):
+        """Detect if system is using dark theme."""
+        try:
+            settings = Gtk.Settings.get_default()
+            return settings.get_property("gtk-application-prefer-dark-theme")
+        except:
+            return False  # Default to light theme
 
     def save_settings(self):
         """Save current settings to the local config file."""
@@ -187,19 +243,34 @@ class UsageBarTray:
         menu.show_all()
         self.indicator.set_menu(menu)
 
-    def make_progress_bar(self, percent_remaining):
-        """Generate a visual Unicode progress bar based on percentage."""
-        width = 10
+    def make_progress_bar(self, percent_remaining, width=20):
+        """
+        Create a visual Unicode progress bar with color coding.
+
+        Uses Unicode block characters for a smooth bar appearance
+        that renders reliably in GTK menus.
+        """
         if percent_remaining >= 50:
-            color, fill = '🟢', '█' # Healthy
+            color_char = '🟢'
         elif percent_remaining >= 20:
-            color, fill = '🟡', '▓' # Warning
+            color_char = '🟡'
         else:
-            color, fill = '🔴', '░' # Critical
-            
+            color_char = '🔴'
+
+        # Use full block and shade characters for smooth bar
         filled = int((percent_remaining / 100) * width)
-        bar = fill * filled + '░' * (width - filled)
-        return f"{color} [{bar}] {percent_remaining:.0f}%"
+        bar = '█' * filled + '░' * (width - filled)
+
+        return f"{color_char} [{bar}] {percent_remaining:.0f}%"
+
+    def get_status_class(self, percent):
+        """Get the CSS status class for a percentage."""
+        if percent >= 50:
+            return 'healthy'
+        elif percent >= 20:
+            return 'warning'
+        else:
+            return 'critical'
 
     def get_status_emoji(self, percent):
         """Get the status indicator emoji."""
@@ -229,7 +300,7 @@ class UsageBarTray:
         self.indicator.set_label("⚠️", "")
 
     def build_full_menu(self):
-        """Build the rich, expandable main menu from provider data."""
+        """Build the rich, expandable main menu from provider data with modern UI."""
         menu = Gtk.Menu()
         lowest_primary = 100
         critical_id = None
@@ -255,10 +326,23 @@ class UsageBarTray:
                 lowest_primary = p_rem
                 critical_id = p_id
 
-            # Main provider item with expandable submenu
-            header_label = f"{config['icon']} {config['name']}  {self.get_status_emoji(p_rem)} {p_rem:.0f}%"
-            provider_menu = Gtk.Menu()
+            # Create provider header with emoji and status
+            # Using simple text label for maximum compatibility
+            status_emoji = self.get_status_emoji(p_rem)
+            header_label = f"{config['icon']} {config['name']}  {status_emoji} {p_rem:.0f}%"
             provider_root = Gtk.MenuItem(label=header_label)
+
+            # Set tooltip with provider details
+            primary = usage.get('primary', {})
+            tooltip_text = f"{config['name']}\nSession: {p_rem:.0f}% remaining"
+            if primary.get('resetDescription'):
+                tooltip_text += f"\nResets: {primary.get('resetDescription')}"
+            if usage.get('accountEmail'):
+                tooltip_text += f"\nAccount: {usage.get('accountEmail')}"
+            provider_root.set_tooltip_text(tooltip_text)
+
+            # Create submenu
+            provider_menu = Gtk.Menu()
             provider_root.set_submenu(provider_menu)
             menu.append(provider_root)
 
@@ -270,11 +354,12 @@ class UsageBarTray:
                 provider_menu.append(Gtk.SeparatorMenuItem())
 
             # Primary (Session) Usage
-            bar = self.make_progress_bar(p_rem)
-            mi = Gtk.MenuItem(label=f"Session: {bar}")
+            session_bar = self.make_progress_bar(p_rem)
+            session_label = f"Session: {session_bar}"
+            mi = Gtk.MenuItem(label=session_label)
             mi.set_sensitive(False)
             provider_menu.append(mi)
-            
+
             if primary.get('resetDescription'):
                 # Detail Mode: show specific timestamp
                 reset_text = f"⏰ {primary.get('resetDescription')}"
@@ -308,6 +393,7 @@ class UsageBarTray:
             # Credit Balance
             creds = p_data.get('credits', {})
             if creds and creds.get('remaining') is not None:
+                provider_menu.append(Gtk.SeparatorMenuItem())
                 mi = Gtk.MenuItem(label=f"💰 ${creds.get('remaining'):.2f} remaining")
                 mi.set_sensitive(False)
                 provider_menu.append(mi)
@@ -329,7 +415,7 @@ class UsageBarTray:
 
         # Bottom Menu Section
         menu.append(Gtk.SeparatorMenuItem())
-        
+
         if self.last_refresh:
             time_str = self.last_refresh.strftime('%H:%M:%S')
             mi = Gtk.MenuItem(label=f"🕐 Last updated: {time_str}")
@@ -341,20 +427,20 @@ class UsageBarTray:
         menu.append(refresh)
 
         menu.append(Gtk.SeparatorMenuItem())
-        
+
         # Settings Submenu
         settings_menu = Gtk.Menu()
         settings_root = Gtk.MenuItem(label="⚙️ Settings")
         settings_root.set_submenu(settings_menu)
         menu.append(settings_root)
-        
+
         detail_item = Gtk.CheckMenuItem(label="Show Technical Details")
         detail_item.set_active(self.show_details)
         detail_item.connect("toggled", self.on_detail_toggled)
         settings_menu.append(detail_item)
 
         menu.append(Gtk.SeparatorMenuItem())
-        
+
         quit_item = Gtk.MenuItem(label="❌ Quit UsageBar")
         quit_item.connect("activate", lambda w: Gtk.main_quit())
         menu.append(quit_item)
@@ -362,15 +448,14 @@ class UsageBarTray:
         menu.show_all()
         self.indicator.set_menu(menu)
 
-        # Update Hub Label: Show status icons or critical percentage
+        # Update Hub Label: Show status or critical percentage
         if critical_id:
-            status = self.get_status_emoji(lowest_primary)
-            if status == '🟢':
-                # Hub is healthy
+            status_class = self.get_status_class(lowest_primary)
+            if status_class == 'healthy':
                 self.indicator.set_label("✅", "")
             else:
-                # One or more primary providers are getting low
-                self.indicator.set_label(f"{status} {lowest_primary:.0f}%", "")
+                emoji = '🟢' if status_class == 'healthy' else '🟡' if status_class == 'warning' else '🔴'
+                self.indicator.set_label(f"{emoji} {lowest_primary:.0f}%", "")
         else:
             self.indicator.set_label("✅", "")
 
