@@ -1,0 +1,24 @@
+Package: usagebar
+Version: 0.0.2
+Architecture: amd64
+Maintainer: Tyler Casey <tc@tylerbuilds.com>
+Description: Premium AI usage tracker for Linux
+ UsageBar is a native GTK3 system tray application that provides
+ real-time visibility into your AI provider limits. Inspired by 
+ CodexBar.app for macOS, UsageBar brings a rich, expandable UI to 
+ Ubuntu and other Linux distributions.
+ .
+ Features:
+  - Multi-provider support (Claude, OpenAI, Gemini, Cursor, Factory)
+  - Color-coded progress bars with emoji indicators
+  - Historical usage tracking with sparkline visualizations
+  - Usage trend analysis (24h charts)
+  - Dark/light theme auto-detection
+  - Rich tooltips and status indicators
+  - Dashboard shortcuts for quick access
+ .
+ UsageBar helps you never hit a "limit reached" surprise again
+ by providing at-a-glance status for all your AI providers.
+Depends: python3 (>= 3.8), python3-gi, gir1.2-appindicator3-0.1, libsqlite3-0
+Priority: optional
+Section: utils

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=UsageBar Tray
+Comment=AI Usage Monitor System Tray
+Exec=/mnt/data/projects/UsageBar/usagebar-tray-launcher.sh
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

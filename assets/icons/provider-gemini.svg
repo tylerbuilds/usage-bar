@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="geminiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4285f4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#34a853;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#geminiGradient)"/>
+
+  <!-- Gemini logo (star constellation) -->
+  <g transform="translate(32, 32)">
+    <!-- Main star -->
+    <path d="M0 -14 L4 -4 L14 -4 L6 3 L9 13 L0 7 L-9 13 L-6 3 L-14 -4 L-4 -4 Z"
+          fill="white" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+
+    <!-- Orbital rings -->
+    <ellipse cx="0" cy="0" rx="20" ry="8" fill="none" stroke="white" stroke-width="1.5" opacity="0.4" transform="rotate(-15)"/>
+    <ellipse cx="0" cy="0" rx="20" ry="8" fill="none" stroke="white" stroke-width="1.5" opacity="0.4" transform="rotate(15)"/>
+
+    <!-- Small stars -->
+    <circle cx="-12" cy="10" r="2" fill="white" opacity="0.7"/>
+    <circle cx="14" cy="-8" r="1.5" fill="white" opacity="0.6"/>
+    <circle cx="8" cy="12" r="1.5" fill="white" opacity="0.5"/>
+  </g>
+</svg>
