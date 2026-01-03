@@ -7,6 +7,13 @@ This script provides a GTK3-based system tray icon with an expandable menu
 to monitor usage limits across various AI providers.
 """
 
+# Add script directory to path for local module imports
+import sys
+import os
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+if _script_dir not in sys.path:
+    sys.path.insert(0, _script_dir)
+
 import gi
 
 # Ensure we have the correct GTK and AppIndicator versions
@@ -22,11 +29,38 @@ except ValueError as e:
 from gi.repository import Gtk, AppIndicator3, GLib, Gdk, GdkPixbuf
 import subprocess
 import json
-import sys
 import webbrowser
 from datetime import datetime
 import threading
-import os
+import importlib.util
+
+# Import history tracking using importlib (more reliable than regular imports)
+try:
+    spec = importlib.util.spec_from_file_location("usagebar_history", os.path.join(_script_dir, "usagebar-history.py"))
+    usagebar_history = importlib.util.module_from_spec(spec)
+    sys.modules["usagebar_history"] = usagebar_history
+    spec.loader.exec_module(usagebar_history)
+    UsageHistory = usagebar_history.UsageHistory
+    HISTORY_AVAILABLE = True
+    print("[UsageBar] ✓ History tracking module loaded")
+except Exception as e:
+    HISTORY_AVAILABLE = False
+    UsageHistory = None
+    print(f"[UsageBar] ✗ History tracking not available: {e}")
+
+# Import chart rendering using importlib
+try:
+    spec = importlib.util.spec_from_file_location("usagebar_charts", os.path.join(_script_dir, "usagebar-charts.py"))
+    usagebar_charts = importlib.util.module_from_spec(spec)
+    sys.modules["usagebar_charts"] = usagebar_charts
+    spec.loader.exec_module(usagebar_charts)
+    UsageChart = usagebar_charts.UsageChart
+    CHARTS_AVAILABLE = True
+    print("[UsageBar] ✓ Chart rendering module loaded")
+except Exception as e:
+    CHARTS_AVAILABLE = False
+    UsageChart = None
+    print(f"[UsageBar] ✗ Chart rendering not available: {e}")
 
 # --- Configuration & Constants ---
 
@@ -83,6 +117,17 @@ class UsageBarTray:
         self.provider_data = []
         self.last_refresh = None
         self.is_refreshing = False
+
+        # Initialize history tracking
+        if HISTORY_AVAILABLE:
+            try:
+                self.history = UsageHistory()
+                print("[UsageBar] History tracking enabled")
+            except Exception as e:
+                print(f"[UsageBar] Warning: Could not initialize history: {e}")
+                self.history = None
+        else:
+            self.history = None
 
         # Load user settings or set defaults
         self.load_settings()
@@ -215,6 +260,14 @@ class UsageBarTray:
         """Main thread callback for successful data fetch."""
         self.provider_data = data
         self.last_refresh = datetime.now()
+
+        # Save to history
+        if self.history:
+            try:
+                self.history.save_snapshot(data)
+            except Exception as e:
+                print(f"[UsageBar] Warning: Failed to save history: {e}")
+
         self.build_full_menu()
         return False
 
@@ -359,6 +412,43 @@ class UsageBarTray:
             mi = Gtk.MenuItem(label=session_label)
             mi.set_sensitive(False)
             provider_menu.append(mi)
+
+            # Add sparkline if we have history
+            if self.history and CHARTS_AVAILABLE:
+                try:
+                    history = self.history.get_history(p_id, hours=24)
+                    print(f"[UsageBar] DEBUG: Provider {p_id}, history count: {len(history)}")  # DEBUG
+                    if len(history) >= 2:
+                        sparkline = UsageChart.render_sparkline_text(history, width=20)
+                        trend = UsageChart.calculate_trend(history)
+
+                        # Format trend info
+                        if trend['direction'] == 'up':
+                            trend_icon = '📈'
+                        elif trend['direction'] == 'down':
+                            trend_icon = '📉'
+                        else:
+                            trend_icon = '➡️'
+
+                        trend_label = f"24h: {sparkline} {trend_icon} {trend['change']:+.0f}%"
+                        print(f"[UsageBar] DEBUG: Adding trend line: {trend_label}")  # DEBUG
+                        ti = Gtk.MenuItem(label=trend_label)
+                        ti.set_sensitive(False)
+                        provider_menu.append(ti)
+                    else:
+                        # Not enough history yet
+                        print(f"[UsageBar] DEBUG: Not enough history ({len(history)} snapshots)")  # DEBUG
+                        if len(history) == 1:
+                            msg = "⏳ Collecting usage data (refreshing...)"
+                        else:
+                            msg = "⏳ Building usage history..."
+                        ti = Gtk.MenuItem(label=msg)
+                        ti.set_sensitive(False)
+                        provider_menu.append(ti)
+                except Exception as e:
+                    print(f"[UsageBar] Warning: Could not render chart: {e}")
+                    import traceback
+                    traceback.print_exc()
 
             if primary.get('resetDescription'):
                 # Detail Mode: show specific timestamp
