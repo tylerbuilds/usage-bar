@@ -1,10 +1,10 @@
-# UsageBar - Linux AI Usage Tracker
+# UsageBar - Linux LLM Usage Tracker
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Platform: Linux](https://img.shields.io/badge/Platform-Linux-orange.svg)
 ![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-green.svg)
 
-A professional system tray application for tracking AI API usage across multiple providers. The Linux port of CodexBar, built with GTK3 and Python.
+UsageBar is a CLI/IDE usage tracker for LLM providers on Linux that lives in the top bar. The Linux port of CodexBar, built with GTK3 and Python.
 
 **[www.tylerbuilds.com](https://www.tylerbuilds.com) | [github.com/tylerbuilds](https://github.com/tylerbuilds)**
 
@@ -13,19 +13,20 @@ A professional system tray application for tracking AI API usage across multiple
 ## ✨ Features
 
 - **Multi-Provider Support**: Claude, Codex, Gemini, Cursor, Z.ai, Antigravity, Factory
-- **Real-Time Monitoring**: Live usage tracking with visual progress bars
+- **CLI & IDE Usage Tracking**: Monitors LLM usage from command-line tools and IDEs
+- **Top Bar Integration**: Lives in the system tray for at-a-glance visibility
 - **Historical Analytics**: SQLite-based history with 90-day retention
 - **Sparkline Charts**: Beautiful 24h trend visualization using Unicode
 - **Privacy-First**: Local data storage, no telemetry
-- **Smart Notifications**: Usage alerts with 50%/20%/5% thresholds
+- **Smart Notifications**: Usage alerts at 50%, 20%, 5% thresholds
 - **Modern UI**: Custom SVG icons, CSS styling, dark/light theme support
 - **Auto-Update**: GitHub Releases integration for seamless updates
 
 ## ✨ Why UsageBar?
 
-While macOS users have CodexBar, Linux users were left in the dark—literally. UsageBar was created to bridge that gap, offering:
+While macOS users have CodexBar, Linux users were left in the dark—literally. UsageBar bridges that gap by running in the top bar and offering:
 
-- **Rich System Tray UI**: Color-coded progress bars (🟢/🟡/🔴) that show your status at a glance
+- **Rich Top Bar UI**: Color-coded progress bars (🟢/🟡/🔴) that show your status at a glance
 - **Expandable Menus**: Deep dives into Session, Weekly, and Model-specific usage (like Claude Sonnet)
 - **Auto-Refresh**: Background updates keep your data fresh without manual intervention
 - **Detailed Mode**: Toggle technical details like precise reset timestamps and token counts
@@ -95,9 +96,9 @@ echo 'zai_token = "your_token"' > ~/.config/codexbar/config.toml
 ### Architecture
 
 UsageBar is built with a decoupled architecture:
-1. **Core (Swift)**: A high-performance usage bridge that talks to provider APIs and local CLI tools
-2. **Tray UI (Python/GTK3)**: A lightweight, responsive menu system using `AppIndicator3`
-3. **Async Hub**: All data fetching happens in background threads to ensure your desktop environment remains buttery smooth
+1. **Core (Swift)**: A high-performance usage bridge that talks to provider APIs and local CLI/IDE tools
+2. **Top Bar UI (Python/GTK3)**: A lightweight, responsive menu system using `AppIndicator3`
+3. **Async Hub**: All data fetching happens in background threads to ensure your desktop environment remains smooth
 
 ## 🐧 Distro Compatibility
 
@@ -135,4 +136,4 @@ Copyright © 2026 Tyler Casey
 
 ---
 
-**Keywords**: `ai-usage-tracker` `linux` `gtk3` `system-tray` `claude` `openai` `api-monitoring` `python` `swift` `ubuntu`
+**Keywords**: `llm-usage-tracker` `linux` `gtk3` `top-bar` `claude` `openai` `ide` `cli` `python` `swift` `ubuntu`
