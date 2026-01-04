@@ -345,6 +345,29 @@ final class UsageStore {
             let envToken = ZaiSettingsReader.apiToken()
             return !settingsToken.isEmpty || envToken != nil
         }
+
+        // For providers that default to disabled, re-validate binary availability
+        // to prevent them from disappearing if the binary was temporarily unavailable
+        // during initial provider detection.
+        let metadata = self.metadata(for: provider)
+        if !metadata.defaultEnabled {
+            switch provider {
+            case .claude:
+                return BinaryLocator.resolveClaudeBinary() != nil
+            case .antigravity:
+                // Can't synchronously check if running; assume enabled if user toggled it on
+                return true
+            case .gemini:
+                return BinaryLocator.resolveGeminiBinary() != nil
+            case .cursor, .factory, .zai:
+                // These don't have simple binary checks; assume enabled if toggled on
+                return true
+            case .codex:
+                // Codex defaults to enabled, so this shouldn't happen
+                return true
+            }
+        }
+
         return true
     }
 

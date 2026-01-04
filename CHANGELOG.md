@@ -84,6 +84,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Provider visibility issue** - Providers like Claude Code and Antigravity no longer disappear due to one-time detection
+- Re-validates binary availability for providers with `defaultEnabled: false` on every check
+- Prevents temporary unavailability during initial detection from permanently disabling providers
+
 ### Planned Features
 - Settings UI (GTK preferences window)
 - Custom alert thresholds per provider
