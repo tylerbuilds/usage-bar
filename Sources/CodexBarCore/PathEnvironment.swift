@@ -457,4 +457,44 @@ public final class LoginShellPathCache: @unchecked Sendable {
             callbacks.forEach { $0(result) }
         }
     }
+
+    /// Refreshes the PATH cache, even if it was previously captured.
+    /// This is useful for detecting newly installed CLI tools without restarting the app.
+    /// - Parameters:
+    ///   - shell: The shell to use for capturing PATH (defaults to SHELL environment variable)
+    ///   - timeout: The timeout for the shell command
+    ///   - onFinish: Optional callback called with the new PATH value
+    public func refresh(
+        shell: String? = ProcessInfo.processInfo.environment["SHELL"],
+        timeout: TimeInterval = 2.0,
+        onFinish: (([String]?) -> Void)? = nil)
+    {
+        self.lock.lock()
+
+        if let onFinish {
+            self.callbacks.append(onFinish)
+        }
+
+        if self.isCapturing {
+            self.lock.unlock()
+            return
+        }
+
+        self.isCapturing = true
+        self.lock.unlock()
+
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let result = LoginShellPathCapturer.capture(shell: shell, timeout: timeout)
+            guard let self else { return }
+
+            self.lock.lock()
+            self.captured = result
+            self.isCapturing = false
+            let callbacks = self.callbacks
+            self.callbacks.removeAll()
+            self.lock.unlock()
+
+            callbacks.forEach { $0(result) }
+        }
+    }
 }

@@ -197,10 +197,12 @@ final class UsageStore {
     @ObservationIgnored private var timerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
+    @ObservationIgnored private var pathRefreshTimerTask: Task<Void, Never>?
     @ObservationIgnored private var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
     @ObservationIgnored private(set) var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored private let tokenFetchTTL: TimeInterval = 60 * 60
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
+    @ObservationIgnored private let pathRefreshTTL: TimeInterval = 5 * 60
 
     init(
         fetcher: UsageFetcher,
@@ -236,6 +238,7 @@ final class UsageStore {
         Task { await self.refresh() }
         self.startTimer()
         self.startTokenTimer()
+        self.startPathRefreshTimer()
     }
 
     /// Returns the login method (plan type) for the specified provider, if available.
@@ -447,6 +450,17 @@ final class UsageStore {
         }
     }
 
+    private func startPathRefreshTimer() {
+        self.pathRefreshTimerTask?.cancel()
+        let wait = self.pathRefreshTTL
+        self.pathRefreshTimerTask = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(wait))
+                await self?.refreshPathCacheAndDetectProviders()
+            }
+        }
+    }
+
     private func scheduleTokenRefresh(force: Bool) {
         if force {
             self.tokenRefreshSequenceTask?.cancel()
@@ -473,6 +487,7 @@ final class UsageStore {
         self.timerTask?.cancel()
         self.tokenTimerTask?.cancel()
         self.tokenRefreshSequenceTask?.cancel()
+        self.pathRefreshTimerTask?.cancel()
     }
 
     private func refreshProvider(_ provider: UsageProvider) async {
@@ -1229,6 +1244,27 @@ extension UsageStore {
 
     private func refreshPathDebugInfo() {
         self.pathDebugInfo = PathBuilder.debugSnapshot(purposes: [.rpc, .tty, .nodeTooling])
+    }
+
+    /// Refreshes the login shell PATH cache and re-runs provider detection.
+    /// This is called periodically to detect newly installed CLI tools without requiring an app restart.
+    /// Can also be called manually via the UI to trigger an immediate refresh.
+    func refreshPathCacheAndDetectProviders() async {
+        // Refresh the PATH cache
+        await withCheckedContinuation { continuation in
+            LoginShellPathCache.shared.refresh { _ in
+                continuation.resume()
+            }
+        }
+
+        // Re-run provider detection with the fresh PATH
+        self.settings.rerunProviderDetection()
+
+        // Refresh path debug info with the new PATH
+        self.refreshPathDebugInfo()
+
+        // Re-detect versions with the updated PATH
+        self.detectVersions()
     }
 
     func clearCostUsageCache() async -> String? {
