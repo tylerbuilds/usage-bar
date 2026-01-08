@@ -19,10 +19,27 @@ public struct RateWindow: Codable, Equatable, Sendable {
     }
 }
 
+/// Additional labeled rate window for providers with multiple quotas (e.g., Antigravity model families)
+public struct ExtraRateWindow: Codable, Equatable, Sendable {
+    public let label: String
+    public let rateWindow: RateWindow
+
+    public init(label: String, rateWindow: RateWindow) {
+        self.label = label
+        self.rateWindow = rateWindow
+    }
+
+    public var remainingPercent: Double {
+        rateWindow.remainingPercent
+    }
+}
+
 public struct UsageSnapshot: Codable, Sendable {
     public let primary: RateWindow
     public let secondary: RateWindow?
     public let tertiary: RateWindow?
+    /// Additional rate windows beyond primary/secondary/tertiary (for providers like Antigravity with multiple model families)
+    public let extraRateWindows: [ExtraRateWindow]
     public let providerCost: ProviderCostSnapshot?
     public let zaiUsage: ZaiUsageSnapshot?
     public let updatedAt: Date
@@ -34,6 +51,7 @@ public struct UsageSnapshot: Codable, Sendable {
         case primary
         case secondary
         case tertiary
+        case extraRateWindows
         case providerCost
         case updatedAt
         case accountEmail
@@ -44,10 +62,11 @@ public struct UsageSnapshot: Codable, Sendable {
     public init(
         primary: RateWindow,
         secondary: RateWindow?,
+        updatedAt: Date,
         tertiary: RateWindow? = nil,
+        extraRateWindows: [ExtraRateWindow] = [],
         providerCost: ProviderCostSnapshot? = nil,
         zaiUsage: ZaiUsageSnapshot? = nil,
-        updatedAt: Date,
         accountEmail: String? = nil,
         accountOrganization: String? = nil,
         loginMethod: String? = nil)
@@ -55,6 +74,7 @@ public struct UsageSnapshot: Codable, Sendable {
         self.primary = primary
         self.secondary = secondary
         self.tertiary = tertiary
+        self.extraRateWindows = extraRateWindows
         self.providerCost = providerCost
         self.zaiUsage = zaiUsage
         self.updatedAt = updatedAt
@@ -68,6 +88,7 @@ public struct UsageSnapshot: Codable, Sendable {
         self.primary = try container.decode(RateWindow.self, forKey: .primary)
         self.secondary = try container.decodeIfPresent(RateWindow.self, forKey: .secondary)
         self.tertiary = try container.decodeIfPresent(RateWindow.self, forKey: .tertiary)
+        self.extraRateWindows = try container.decodeIfPresent([ExtraRateWindow].self, forKey: .extraRateWindows) ?? []
         self.providerCost = try container.decodeIfPresent(ProviderCostSnapshot.self, forKey: .providerCost)
         self.zaiUsage = nil // Not persisted, fetched fresh each time
         self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
@@ -431,8 +452,8 @@ public struct UsageFetcher: Sendable {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
-            tertiary: nil,
             updatedAt: Date(),
+            tertiary: nil,
             accountEmail: account?.account.flatMap { details in
                 if case let .chatgpt(email, _) = details { email } else { nil }
             },
@@ -462,8 +483,8 @@ public struct UsageFetcher: Sendable {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
-            tertiary: nil,
             updatedAt: Date(),
+            tertiary: nil,
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: nil)

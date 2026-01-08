@@ -146,10 +146,10 @@ extension ZaiUsageSnapshot {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
+            updatedAt: self.updatedAt,
             tertiary: nil,
             providerCost: nil,
             zaiUsage: self,
-            updatedAt: self.updatedAt,
             accountEmail: nil,
             accountOrganization: nil,
             loginMethod: "z.ai")

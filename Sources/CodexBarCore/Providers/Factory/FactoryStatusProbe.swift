@@ -348,9 +348,9 @@ public struct FactoryStatusSnapshot: Sendable {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
+            updatedAt: Date(),
             tertiary: nil,
             providerCost: nil,
-            updatedAt: Date(),
             accountEmail: self.accountEmail,
             accountOrganization: self.organizationName,
             loginMethod: loginMethod)

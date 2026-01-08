@@ -31,11 +31,24 @@ public struct AntigravityStatusSnapshot: Sendable {
         let secondary = ordered.count > 1 ? Self.rateWindow(for: ordered[1]) : nil
         let tertiary = ordered.count > 2 ? Self.rateWindow(for: ordered[2]) : nil
 
+        // Include all additional model quotas beyond the first 3
+        let extraRateWindows: [ExtraRateWindow] = if ordered.count > 3 {
+            ordered[3...].map { quota in
+                ExtraRateWindow(
+                    label: quota.label,
+                    rateWindow: Self.rateWindow(for: quota)
+                )
+            }
+        } else {
+            []
+        }
+
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
-            tertiary: tertiary,
             updatedAt: Date(),
+            tertiary: tertiary,
+            extraRateWindows: extraRateWindows,
             accountEmail: self.accountEmail,
             loginMethod: self.accountPlan)
     }

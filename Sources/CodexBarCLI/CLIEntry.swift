@@ -421,8 +421,8 @@ enum CodexBarCLI {
                 let snapshot = UsageSnapshot(
                     primary: webUsage.primary,
                     secondary: webUsage.secondary,
-                    tertiary: webUsage.opus,
                     updatedAt: webUsage.updatedAt,
+                    tertiary: webUsage.opus,
                     accountEmail: webUsage.accountEmail,
                     accountOrganization: webUsage.accountOrganization,
                     loginMethod: webUsage.loginMethod)
@@ -515,9 +515,9 @@ enum CodexBarCLI {
                     usage: UsageSnapshot(
                         primary: effectivePrimary,
                         secondary: effectiveSecondary,
+                        updatedAt: usage.updatedAt,
                         tertiary: usage.opus,
                         providerCost: usage.providerCost,
-                        updatedAt: usage.updatedAt,
                         accountEmail: usage.accountEmail,
                         accountOrganization: usage.accountOrganization,
                         loginMethod: usage.loginMethod),

@@ -117,9 +117,9 @@ extension OpenAIDashboardSnapshot {
         return UsageSnapshot(
             primary: primaryLimit,
             secondary: self.secondaryLimit,
+            updatedAt: self.updatedAt,
             tertiary: nil,
             providerCost: nil,
-            updatedAt: self.updatedAt,
             accountEmail: resolvedEmail,
             accountOrganization: nil,
             loginMethod: resolvedPlan)

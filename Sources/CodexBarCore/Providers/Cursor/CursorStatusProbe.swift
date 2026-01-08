@@ -315,9 +315,9 @@ public struct CursorStatusSnapshot: Sendable {
         return UsageSnapshot(
             primary: primary,
             secondary: secondary,
+            updatedAt: Date(),
             tertiary: nil,
             providerCost: providerCost,
-            updatedAt: Date(),
             accountEmail: self.accountEmail,
             accountOrganization: nil,
             loginMethod: self.membershipType.map { Self.formatMembershipType($0) })
