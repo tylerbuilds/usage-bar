@@ -75,9 +75,25 @@ struct ClaudeProviderImplementation: ProviderImplementation {
             }
 
             let usage = try await fetcher.loadLatestUsage(model: "sonnet")
+            // For Claude, both daily (session) AND weekly limits apply.
+            // The more restrictive limit determines if you can actually use Claude.
+            // So we put the more restrictive one as primary so the UI shows it as exhausted when either limit is hit.
+            let effectivePrimary: RateWindow
+            let effectiveSecondary: RateWindow?
+            if let weekly = usage.secondary,
+               weekly.remainingPercent < usage.primary.remainingPercent
+            {
+                // Weekly is more restrictive - swap them
+                effectivePrimary = weekly
+                effectiveSecondary = usage.primary
+            } else {
+                // Daily/session is more restrictive or equal - keep as is
+                effectivePrimary = usage.primary
+                effectiveSecondary = usage.secondary
+            }
             return UsageSnapshot(
-                primary: usage.primary,
-                secondary: usage.secondary,
+                primary: effectivePrimary,
+                secondary: effectiveSecondary,
                 tertiary: usage.opus,
                 providerCost: usage.providerCost,
                 updatedAt: usage.updatedAt,
