@@ -5,6 +5,16 @@ All notable changes to UsageBar will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Automatic provider detection** - PATH cache refreshes every 5 minutes, detecting newly installed CLIs without app restart
+- **All Antigravity model quotas** - Support for unlimited model families (Claude/GPT, Gemini Flash, Gemini Pro, etc.) with labels
+
+### Fixed
+- **Claude dual-limit display** - Primary display now shows min(daily, weekly) so exhausted weekly limits are visible
+- **Provider detection reliability** - PATH cache refresh integrated into main refresh cycle for consistent behavior
+
 ## [0.0.2] - 2026-01-03
 
 ### Added
