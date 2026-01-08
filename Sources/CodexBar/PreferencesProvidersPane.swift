@@ -17,7 +17,6 @@ struct ProvidersPane: View {
     @State private var settingsStatusTextByID: [String: String] = [:]
     @State private var settingsLastAppActiveRunAtByID: [String: Date] = [:]
     @State private var activeConfirmation: ProviderSettingsConfirmationState?
-    @State private var isRefreshingProviders = false
 
     private var providers: [UsageProvider] { self.settings.orderedProviders() }
 
@@ -69,40 +68,12 @@ struct ProvidersPane: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Providers")
-                    .font(.headline)
-                Text("Enable or disable usage providers")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Button {
-                Task {
-                    self.isRefreshingProviders = true
-                    await self.store.refreshPathCacheAndDetectProviders()
-                    self.isRefreshingProviders = false
-                }
-            } label: {
-                if self.isRefreshingProviders {
-                    HStack(spacing: 4) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Refreshing…")
-                    }
-                } else {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.clockwise")
-                        Text("Detect Providers")
-                    }
-                }
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .disabled(self.isRefreshingProviders)
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Providers")
+                .font(.headline)
+            Text("Enable or disable usage providers")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

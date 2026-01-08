@@ -197,12 +197,10 @@ final class UsageStore {
     @ObservationIgnored private var timerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenTimerTask: Task<Void, Never>?
     @ObservationIgnored private var tokenRefreshSequenceTask: Task<Void, Never>?
-    @ObservationIgnored private var pathRefreshTimerTask: Task<Void, Never>?
     @ObservationIgnored private var lastKnownSessionRemaining: [UsageProvider: Double] = [:]
     @ObservationIgnored private(set) var lastTokenFetchAt: [UsageProvider: Date] = [:]
     @ObservationIgnored private let tokenFetchTTL: TimeInterval = 60 * 60
     @ObservationIgnored private let tokenFetchTimeout: TimeInterval = 10 * 60
-    @ObservationIgnored private let pathRefreshTTL: TimeInterval = 5 * 60
 
     init(
         fetcher: UsageFetcher,
@@ -238,7 +236,6 @@ final class UsageStore {
         Task { await self.refresh() }
         self.startTimer()
         self.startTokenTimer()
-        self.startPathRefreshTimer()
     }
 
     /// Returns the login method (plan type) for the specified provider, if available.
@@ -379,6 +376,10 @@ final class UsageStore {
         self.isRefreshing = true
         defer { self.isRefreshing = false }
 
+        // Refresh PATH cache and re-detect providers periodically.
+        // This ensures newly installed CLIs are discovered without requiring an app restart.
+        await self.refreshPathCacheAndDetectProviders()
+
         await withTaskGroup(of: Void.self) { group in
             for provider in UsageProvider.allCases {
                 group.addTask { await self.refreshProvider(provider) }
@@ -450,17 +451,6 @@ final class UsageStore {
         }
     }
 
-    private func startPathRefreshTimer() {
-        self.pathRefreshTimerTask?.cancel()
-        let wait = self.pathRefreshTTL
-        self.pathRefreshTimerTask = Task.detached(priority: .utility) { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(wait))
-                await self?.refreshPathCacheAndDetectProviders()
-            }
-        }
-    }
-
     private func scheduleTokenRefresh(force: Bool) {
         if force {
             self.tokenRefreshSequenceTask?.cancel()
@@ -487,7 +477,6 @@ final class UsageStore {
         self.timerTask?.cancel()
         self.tokenTimerTask?.cancel()
         self.tokenRefreshSequenceTask?.cancel()
-        self.pathRefreshTimerTask?.cancel()
     }
 
     private func refreshProvider(_ provider: UsageProvider) async {
